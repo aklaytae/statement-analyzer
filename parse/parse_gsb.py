@@ -22,7 +22,6 @@ def parse_gsb(pdf_path):
 
             for line in lines:
 
-                # skip header
                 if "ยอดยกมา" in line or "C/F" in line:
                     continue
 
@@ -30,34 +29,38 @@ def parse_gsb(pdf_path):
                 if not date_match:
                     continue
 
-                date_str = date_match.group()
-
-                try:
-                    date = datetime.strptime(date_str, "%d/%m/%Y")
-                except:
-                    continue
+                date = datetime.strptime(date_match.group(), "%d/%m/%Y")
 
                 numbers = re.findall(r"[\d,]+\.\d{2}", line)
 
-                # ✅ ต้องมี 3 ค่า (expense income balance)
                 if len(numbers) < 3:
                     continue
 
-                # ✅ ✅ FIX จริงอยู่ตรงนี้
-                expense = clean_number(numbers[-3])
-                income = clean_number(numbers[-2])
-                balance = clean_number(numbers[-1])
+                # ✅ ดึงท้ายสุด
+                last = [clean_number(x) for x in numbers[-3:]]
 
-                # skip empty
-                if expense == 0 and income == 0:
-                    continue
+                # structure:
+                # [amount, tax, balance]
+
+                amount = last[0]
+                tax = last[1]
+                balance = last[2]
+
+                desc = line
+
+                # ✅ แยก income / expense จาก DESCRIPTION
+                if "PPSDTR" in desc or "ฝาก" in desc or "Transfer SAV" in desc:
+                    income = amount
+                    expense = 0
+                else:
+                    income = 0
+                    expense = amount
 
                 transactions.append({
                     "date": date,
                     "balance": balance,
                     "income": income,
                     "expense": expense,
-                    "description": line
                 })
 
     return transactions
