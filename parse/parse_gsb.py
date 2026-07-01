@@ -4,8 +4,8 @@ import re
 from datetime import datetime
 
 
-def clean_number(text):
-    return float(text.replace(",", ""))
+def clean_number(x):
+    return float(x.replace(",", ""))
 
 
 def parse_gsb(pdf_path):
@@ -22,32 +22,33 @@ def parse_gsb(pdf_path):
 
             for line in lines:
 
-                # ✅ หา date
+                # skip header
+                if "ยอดยกมา" in line or "C/F" in line:
+                    continue
+
                 date_match = re.search(r"\d{2}/\d{2}/\d{4}", line)
                 if not date_match:
                     continue
 
                 date_str = date_match.group()
 
-                # ✅ ดึงตัวเลขทั้งหมด
-                numbers = re.findall(r"[\d,]+\.\d{2}", line)
-
-                # ✅ GSB pattern: ต้องมีอย่างน้อย 3 ค่า
-                # balance + expense + income
-                if len(numbers) < 3:
-                    continue
-
                 try:
                     date = datetime.strptime(date_str, "%d/%m/%Y")
                 except:
                     continue
 
-                # ✅ ตัวสำคัญที่สุด
-                expense = clean_number(numbers[-2])
-                income = clean_number(numbers[-1])
-                balance = clean_number(numbers[0])
+                numbers = re.findall(r"[\d,]+\.\d{2}", line)
 
-                # ✅ skip zero transaction
+                # ✅ ต้องมี 3 ค่า (expense income balance)
+                if len(numbers) < 3:
+                    continue
+
+                # ✅ ✅ FIX จริงอยู่ตรงนี้
+                expense = clean_number(numbers[-3])
+                income = clean_number(numbers[-2])
+                balance = clean_number(numbers[-1])
+
+                # skip empty
                 if expense == 0 and income == 0:
                     continue
 
