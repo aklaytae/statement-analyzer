@@ -8,6 +8,27 @@ def clean_number(x):
     return float(x.replace(",", ""))
 
 
+def merge_lines(lines):
+    """รวมบรรทัดที่ belong ด้วยกัน"""
+    merged = []
+    buffer = ""
+
+    for line in lines:
+
+        # ถ้ามี date = เริ่ม transaction ใหม่
+        if re.search(r"\d{2}/\d{2}/\d{4}", line):
+            if buffer:
+                merged.append(buffer)
+            buffer = line
+        else:
+            buffer += " " + line
+
+    if buffer:
+        merged.append(buffer)
+
+    return merged
+
+
 def parse_gsb(pdf_path):
     transactions = []
 
@@ -20,13 +41,14 @@ def parse_gsb(pdf_path):
 
             lines = text.split("\n")
 
+            # ✅ ✅ FIX สำคัญตรงนี้
+            lines = merge_lines(lines)
+
             for line in lines:
 
-                # ✅ skip header/footer
                 if "ยอดยกมา" in line or "C/F" in line:
                     continue
 
-                # ✅ หา date
                 date_match = re.search(r"\d{2}/\d{2}/\d{4}", line)
                 if not date_match:
                     continue
@@ -38,18 +60,16 @@ def parse_gsb(pdf_path):
                 except:
                     continue
 
-                # ✅ ดึงตัวเลขทั้งหมด
                 numbers = re.findall(r"[\d,]+\.\d{2}", line)
 
-                # ✅ ต้องมีอย่างน้อย 2 ตัวท้าย
                 if len(numbers) < 2:
                     continue
 
-                # ✅ ✅ KEY FIX ตรงนี้
+                # ✅ ใช้ 2 ตัวท้ายเหมือนเดิม
                 expense = clean_number(numbers[-2])
                 income = clean_number(numbers[-1])
 
-                # ✅ skip ถ้าไม่มี transaction
+                # skip แถวว่าง
                 if expense == 0 and income == 0:
                     continue
 
