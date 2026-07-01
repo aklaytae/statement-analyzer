@@ -20,7 +20,10 @@ if file:
 
     st.info("🔍 กำลังอ่านไฟล์...")
 
-    transactions = parse_gsb(pdf_path)
+    
+transactions = parse_gsb(pdf_path)
+transactions = merge_same_day(transactions)
+
 
     if not transactions:
         st.error("❌ ไม่พบข้อมูล")
