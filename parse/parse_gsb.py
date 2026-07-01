@@ -1,3 +1,4 @@
+
 import pdfplumber
 import re
 from datetime import datetime
@@ -28,11 +29,12 @@ def parse_gsb(pdf_path):
 
                 date_str = date_match.group()
 
-                # ✅ หาเลขทั้งหมด
+                # ✅ ดึงตัวเลขทั้งหมด
                 numbers = re.findall(r"[\d,]+\.\d{2}", line)
 
-                # ต้องมีอย่างน้อย balance + 1 ช่อง amount
-                if len(numbers) < 2:
+                # ✅ GSB pattern: ต้องมีอย่างน้อย 3 ค่า
+                # balance + expense + income
+                if len(numbers) < 3:
                     continue
 
                 try:
@@ -40,39 +42,12 @@ def parse_gsb(pdf_path):
                 except:
                     continue
 
-                # ✅ logic สำคัญ
-                # structure GSB:
-                # numbers = [balance, expense?, income?]
-
+                # ✅ ตัวสำคัญที่สุด
+                expense = clean_number(numbers[-2])
+                income = clean_number(numbers[-1])
                 balance = clean_number(numbers[0])
 
-                expense = 0
-                income = 0
-
-                if len(numbers) == 3:
-                    # ✅ มีทั้ง expense และ income (ปกติ)
-                    left = clean_number(numbers[1])
-                    right = clean_number(numbers[2])
-
-                    # 👉 left = expense, right = income
-                    expense = left
-                    income = right
-
-                elif len(numbers) == 2:
-                    # ✅ มีแค่ช่องเดียว → ต้องดูตำแหน่งจาก text
-                    value = clean_number(numbers[1])
-
-                    # heuristic fallback
-                    if " " in line:
-                        # ถ้าอยู่ด้านขวา (income)
-                        if re.search(r"\s{}\s*$".format(numbers[1]), line):
-                            income = value
-                        else:
-                            expense = value
-                    else:
-                        expense = value
-
-                # ✅ skip zero line
+                # ✅ skip zero transaction
                 if expense == 0 and income == 0:
                     continue
 
