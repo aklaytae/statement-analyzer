@@ -3,7 +3,7 @@ import streamlit as st
 from tempfile import NamedTemporaryFile
 import pandas as pd
 
-from parse.parse_gsb import parse_gsb
+from parse_gsb import parse_gsb
 from utils.summary import summarize_daily
 from generate.generate_excel import generate_excel
 
