@@ -4,29 +4,8 @@ import re
 from datetime import datetime
 
 
-def clean_number(x):
-    return float(x.replace(",", ""))
-
-
-def merge_lines(lines):
-    """รวมบรรทัดที่ belong ด้วยกัน"""
-    merged = []
-    buffer = ""
-
-    for line in lines:
-
-        # ถ้ามี date = เริ่ม transaction ใหม่
-        if re.search(r"\d{2}/\d{2}/\d{4}", line):
-            if buffer:
-                merged.append(buffer)
-            buffer = line
-        else:
-            buffer += " " + line
-
-    if buffer:
-        merged.append(buffer)
-
-    return merged
+def clean_number(text):
+    return float(text.replace(",", ""))
 
 
 def parse_gsb(pdf_path):
@@ -41,42 +20,42 @@ def parse_gsb(pdf_path):
 
             lines = text.split("\n")
 
-            # ✅ ✅ FIX สำคัญตรงนี้
-            lines = merge_lines(lines)
-
             for line in lines:
 
-                if "ยอดยกมา" in line or "C/F" in line:
-                    continue
-
+                # ✅ หา date
                 date_match = re.search(r"\d{2}/\d{2}/\d{4}", line)
                 if not date_match:
                     continue
 
                 date_str = date_match.group()
 
+                # ✅ ดึงตัวเลขทั้งหมด
+                numbers = re.findall(r"[\d,]+\.\d{2}", line)
+
+                # ✅ GSB pattern: ต้องมีอย่างน้อย 3 ค่า
+                # balance + expense + income
+                if len(numbers) < 3:
+                    continue
+
                 try:
                     date = datetime.strptime(date_str, "%d/%m/%Y")
                 except:
                     continue
 
-                numbers = re.findall(r"[\d,]+\.\d{2}", line)
-
-                if len(numbers) < 2:
-                    continue
-
-                # ✅ ใช้ 2 ตัวท้ายเหมือนเดิม
+                # ✅ ตัวสำคัญที่สุด
                 expense = clean_number(numbers[-2])
                 income = clean_number(numbers[-1])
+                balance = clean_number(numbers[0])
 
-                # skip แถวว่าง
+                # ✅ skip zero transaction
                 if expense == 0 and income == 0:
                     continue
 
                 transactions.append({
                     "date": date,
-                    "expense": expense,
+                    "balance": balance,
                     "income": income,
+                    "expense": expense,
                     "description": line
                 })
 
