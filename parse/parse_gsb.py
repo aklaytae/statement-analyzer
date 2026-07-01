@@ -22,6 +22,10 @@ def parse_gsb(pdf_path):
 
             for line in lines:
 
+                # ✅ skip header/footer
+                if "ยอดยกมา" in line or "C/F" in line:
+                    continue
+
                 # ✅ หา date
                 date_match = re.search(r"\d{2}/\d{2}/\d{4}", line)
                 if not date_match:
@@ -34,22 +38,18 @@ def parse_gsb(pdf_path):
                 except:
                     continue
 
-                # ✅ ดึงเลขทั้งหมด
+                # ✅ ดึงตัวเลขทั้งหมด
                 numbers = re.findall(r"[\d,]+\.\d{2}", line)
 
-                # ✅ ต้องมีอย่างน้อย 2 ตัวท้าย (expense + income)
+                # ✅ ต้องมีอย่างน้อย 2 ตัวท้าย
                 if len(numbers) < 2:
                     continue
 
-                # ✅ ตัวหลักที่ถูกต้อง
+                # ✅ ✅ KEY FIX ตรงนี้
                 expense = clean_number(numbers[-2])
                 income = clean_number(numbers[-1])
 
-                # ❌ skip B/F (ยอดยกมา)
-                if "B/F" in line:
-                    continue
-
-                # ❌ skip ถ้าไม่มี transaction
+                # ✅ skip ถ้าไม่มี transaction
                 if expense == 0 and income == 0:
                     continue
 
