@@ -6,6 +6,7 @@ import pandas as pd
 from parse_gsb import parse_gsb
 from utils.summary import summarize_daily
 from generate.generate_excel import generate_excel
+from utils.summary import merge_same_day  # ✅ อย่าลืม import
 
 st.set_page_config(page_title="Statement Analyzer")
 
@@ -20,10 +21,9 @@ if file:
 
     st.info("🔍 กำลังอ่านไฟล์...")
 
-    
-transactions = parse_gsb(pdf_path)
-transactions = merge_same_day(transactions)
-
+    # ✅ ต้องอยู่ใน block นี้
+    transactions = parse_gsb(pdf_path)
+    transactions = merge_same_day(transactions)
 
     if not transactions:
         st.error("❌ ไม่พบข้อมูล")
