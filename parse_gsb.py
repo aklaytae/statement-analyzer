@@ -74,3 +74,43 @@ def parse_gsb(pdf_path):
                 })
 
     return transactions
+
+
+def merge_same_day(transactions):
+    merged = []
+    used = [False] * len(transactions)
+
+    for i in range(len(transactions)):
+        if used[i]:
+            continue
+
+        t1 = transactions[i]
+
+        for j in range(i + 1, len(transactions)):
+            if used[j]:
+                continue
+
+            t2 = transactions[j]
+
+            # ✅ เงื่อนไข: วันเดียว + amount เท่ากัน
+            if (
+                t1["date"] == t2["date"] and
+                abs(t1["expense"] - t2["income"]) < 0.01 or
+                abs(t1["income"] - t2["expense"]) < 0.01
+            ):
+                merged.append({
+                    "date": t1["date"],
+                    "income": max(t1["income"], t2["income"]),
+                    "expense": max(t1["expense"], t2["expense"]),
+                    "description": t1["description"] + " | " + t2["description"]
+                })
+
+                used[i] = True
+                used[j] = True
+                break
+
+        if not used[i]:
+            merged.append(t1)
+
+    return merged
+
