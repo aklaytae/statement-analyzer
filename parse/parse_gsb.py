@@ -4,14 +4,11 @@ from datetime import datetime
 
 
 def clean_number(text):
-    """แปลง 1,234.56 → float"""
     return float(text.replace(",", ""))
 
 
 def parse_gsb(pdf_path):
     transactions = []
-
-    prev_balance = None
 
     with pdfplumber.open(pdf_path) as pdf:
         for page in pdf.pages:
@@ -31,44 +28,60 @@ def parse_gsb(pdf_path):
 
                 date_str = date_match.group()
 
-                # ✅ หาเลขทั้งหมดในบรรทัด
+                # ✅ หาเลขทั้งหมด
                 numbers = re.findall(r"[\d,]+\.\d{2}", line)
 
-                # ต้องมีขั้นต่ำ balance + amount
+                # ต้องมีอย่างน้อย balance + 1 ช่อง amount
                 if len(numbers) < 2:
                     continue
 
-                # ✅ balance = ตัวแรก
-                balance = clean_number(numbers[0])
-
-                # ✅ parse date
                 try:
                     date = datetime.strptime(date_str, "%d/%m/%Y")
                 except:
                     continue
 
-                # ✅ ใช้ diff ระหว่าง balance
-                if prev_balance is not None:
-                    diff = balance - prev_balance
+                # ✅ logic สำคัญ
+                # structure GSB:
+                # numbers = [balance, expense?, income?]
 
-                    # ปัดเศษแก้ floating point
-                    diff = round(diff, 2)
+                balance = clean_number(numbers[0])
 
-                    if diff > 0:
-                        income = diff
-                        expense = 0
+                expense = 0
+                income = 0
+
+                if len(numbers) == 3:
+                    # ✅ มีทั้ง expense และ income (ปกติ)
+                    left = clean_number(numbers[1])
+                    right = clean_number(numbers[2])
+
+                    # 👉 left = expense, right = income
+                    expense = left
+                    income = right
+
+                elif len(numbers) == 2:
+                    # ✅ มีแค่ช่องเดียว → ต้องดูตำแหน่งจาก text
+                    value = clean_number(numbers[1])
+
+                    # heuristic fallback
+                    if " " in line:
+                        # ถ้าอยู่ด้านขวา (income)
+                        if re.search(r"\s{}\s*$".format(numbers[1]), line):
+                            income = value
+                        else:
+                            expense = value
                     else:
-                        income = 0
-                        expense = abs(diff)
+                        expense = value
 
-                    transactions.append({
-                        "date": date,
-                        "balance": balance,
-                        "income": income,
-                        "expense": expense,
-                        "description": line
-                    })
+                # ✅ skip zero line
+                if expense == 0 and income == 0:
+                    continue
 
-                prev_balance = balance
+                transactions.append({
+                    "date": date,
+                    "balance": balance,
+                    "income": income,
+                    "expense": expense,
+                    "description": line
+                })
 
     return transactions
