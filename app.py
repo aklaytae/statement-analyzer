@@ -6,7 +6,6 @@ import pandas as pd
 from parse_gsb import parse_gsb
 from utils.summary import summarize_daily
 from generate.generate_excel import generate_excel
-from utils.summary import merge_same_day  # ✅ อย่าลืม import
 
 st.set_page_config(page_title="Statement Analyzer")
 
@@ -52,3 +51,43 @@ if file:
                 f,
                 file_name="statement_summary.xlsx"
             )
+
+
+def merge_same_day(transactions):
+    merged = []
+    used = [False] * len(transactions)
+
+    for i in range(len(transactions)):
+        if used[i]:
+            continue
+
+        t1 = transactions[i]
+        found_pair = False
+
+        for j in range(i + 1, len(transactions)):
+            if used[j]:
+                continue
+
+            t2 = transactions[j]
+
+            # ✅ เงื่อนไขจับคู่ (วันเดียว + amount เท่ากัน)
+            if t1["date"] == t2["date"]:
+                if abs(t1["expense"] - t2["income"]) < 0.01 or abs(t1["income"] - t2["expense"]) < 0.01:
+
+                    merged.append({
+                        "date": t1["date"],
+                        "income": max(t1["income"], t2["income"]),
+                        "expense": max(t1["expense"], t2["expense"]),
+                        "description": t1.get("description", "") + " | " + t2.get("description", "")
+                    })
+
+                    used[i] = True
+                    used[j] = True
+                    found_pair = True
+                    break
+
+        if not found_pair:
+            merged.append(t1)
+
+    return merged
+
